@@ -1,624 +1,440 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-// import { useRouter } from 'next/navigation';
-// import {
-//   ClerkProvider,
-//   SignInButton,
-//   SignUpButton,
-//   SignedIn,
-//   SignedOut,
-//   useAuth,
-// } from '@clerk/nextjs';
-import { ThemeToggle } from '@/components/theme-toggle';
-import AuthButtons from '@/components/AuthButtons';
-
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import {
-  Menu,
-  Star,
-  Globe,
-  BookOpen,
-  Building,
-  Scroll,
+  Search,
+  Sparkles,
+  Calendar,
   Users,
-  Github,
-  Mail,
-  ExternalLink,
-  LucideIcon,
-  LayoutDashboard,
-} from 'lucide-react';
-import Link from 'next/link';
+  MapPin,
+  Flame,
+  Scroll,
+  Building2,
+  FileText,
+  Network,
+  ArrowRight,
+  TrendingUp,
+  Award,
+  BookOpen,
+  ChevronRight,
+  ShieldCheck,
+  Compass,
+  Star,
+  Eye,
+  Share2
+} from "lucide-react";
 
-// Animation Variants
+import { PublicHeader } from "@/components/public/PublicHeader";
+import { PublicFooter } from "@/components/public/PublicFooter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const fadeInUp = {
-  hidden: { opacity: 0, y: 60 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.8 } },
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
 const staggerContainer = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
 };
 
-const scaleIn = {
-  hidden: { scale: 0.8, opacity: 0 },
-  show: { scale: 1, opacity: 1, transition: { duration: 0.6 } },
-};
+// Featured Cultural Heritage Objects (Default Highlights)
+const FEATURED_HERITAGE = [
+  {
+    id: 1,
+    title: "Indra Jatra (Yenya)",
+    type: "Festival",
+    route: "/festival/1",
+    category: "Street Festival & Chariot Procession",
+    location: "Kathmandu Durbar Square",
+    timePeriod: "Bhadra (Aug-Sept)",
+    description: "The largest religious street festival in Kathmandu celebrating Lord Indra and Living Goddess Kumari with mask dances, chariot processions, and centuries-old Guthi rituals.",
+    imageBg: "from-amber-600 via-orange-600 to-red-700",
+    badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    stats: { connections: 18, sources: 6 }
+  },
+  {
+    id: 1,
+    title: "Pashupatinath Temple Complex",
+    type: "Place / Monument",
+    route: "/place/1",
+    category: "Sacred Hindu Sanctuary",
+    location: "Bagmati River, Kathmandu",
+    timePeriod: "5th Century CE",
+    description: "UNESCO World Heritage site and sacred Hindu temple complex dedicated to Lord Shiva, featuring ancient pagoda architecture, ashrams, and living cremation rituals.",
+    imageBg: "from-blue-700 via-indigo-700 to-purple-800",
+    badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    stats: { connections: 24, sources: 12 }
+  },
+  {
+    id: 1,
+    title: "Bisket Jatra",
+    type: "Festival",
+    route: "/festival/2",
+    category: "New Year Chariot Festival",
+    location: "Bhaktapur Durbar Square",
+    timePeriod: "Baisakh (April)",
+    description: "An ancient Newari festival in Bhaktapur marking Nepal Sambat / Bikram Sambat New Year, featuring massive chariot pulling of Bhairava and erect pole ceremonies.",
+    imageBg: "from-emerald-700 via-teal-700 to-cyan-800",
+    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    stats: { connections: 14, sources: 5 }
+  },
+  {
+    id: 1,
+    title: "King Pratap Malla",
+    type: "Personality",
+    route: "/person/1",
+    category: "Malla Monarch & Scholar",
+    location: "Kathmandu Kingdom",
+    timePeriod: "1641–1674 CE",
+    description: "Renowned 17th-century Malla king of Kathmandu, scholar of 15 languages, poet, and patron of iconic monuments including Rani Pokhari and Hanuman Dhoka.",
+    imageBg: "from-rose-700 via-pink-700 to-purple-800",
+    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    stats: { connections: 32, sources: 15 }
+  }
+];
 
-// Floating Particles Component
-const FloatingParticles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {Array(20)
-      .fill(0)
-      .map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute bg-blue-400/20 rounded-full"
-          style={{
-            width: Math.random() * 6 + 2,
-            height: Math.random() * 6 + 2,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-          }}
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.2, 0.5, 0.2],
-            transition: {
-              duration: Math.random() * 5 + 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-              ease: 'linear',
-            },
-          }}
-        />
-      ))}
-  </div>
-);
+const CATEGORY_SURFACES = [
+  { label: "Festivals", type: "festivals", count: "30+", icon: Calendar, color: "text-amber-500 bg-amber-500/10 border-amber-500/20" },
+  { label: "Personalities", type: "persons", count: "45+", icon: Users, color: "text-rose-500 bg-rose-500/10 border-rose-500/20" },
+  { label: "Heritage Places", type: "locations", count: "60+", icon: MapPin, color: "text-blue-500 bg-blue-500/10 border-blue-500/20" },
+  { label: "Historical Events", type: "events", count: "25+", icon: Flame, color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
+  { label: "Living Traditions", type: "traditions", count: "20+", icon: Scroll, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" },
+  { label: "Guthis & Orgs", type: "guthis", count: "15+", icon: Building2, color: "text-violet-500 bg-violet-500/10 border-violet-500/20" },
+  { label: "Sources & Texts", type: "sources", count: "40+", icon: FileText, color: "text-cyan-500 bg-cyan-500/10 border-cyan-500/20" },
+  { label: "Knowledge Graph", type: "graph", count: "Graph View", icon: Network, color: "text-sky-500 bg-sky-500/10 border-sky-500/20" }
+];
 
-// Gradient Orbs Component
-const GradientOrbs = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-300/20 to-blue-500/20 rounded-full blur-3xl animate-pulse" />
-    <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-r from-sky-300/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000" />
-    <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-gradient-to-r from-blue-200/20 to-sky-400/20 rounded-full blur-3xl animate-pulse delay-2000" />
-  </div>
-);
+const REGION_SURFACES = [
+  { name: "Kathmandu Valley", count: "120 Entities", description: "Hanuman Dhoka, Swayambhunath, Pashupati, & living Newar Guthi heritage.", bg: "from-amber-900/40 to-slate-900/80" },
+  { name: "Patan (Lalitpur)", count: "85 Entities", description: "City of fine arts, Krishna Mandir, Rato Machhindranath, & Mahaboudha.", bg: "from-blue-900/40 to-slate-900/80" },
+  { name: "Bhaktapur", count: "70 Entities", description: "Nyatapola, 55-Window Palace, Bisket Jatra, & ancient pottery traditions.", bg: "from-emerald-900/40 to-slate-900/80" },
+  { name: "Lumbini & Western Nepal", count: "40 Entities", description: "Birthplace of Lord Buddha, Ashoka Pillar, & ancient Kapilvastu ruins.", bg: "from-purple-900/40 to-slate-900/80" }
+];
 
-interface PreservationItem {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  gradient: string;
-}
-
-export default function Home() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const { scrollYProgress } = useScroll();
-  const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [0.95, 1]);
-  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, -100]);
-  // const { isSignedIn } = useAuth(); // client-side auth check
-  // const router = useRouter();
-
-  // useEffect(() => {
-  //   if (!isSignedIn) router.push('/sign-in'); // redirect client-side if not signed in
-  // }, [isSignedIn, router]);
+export default function PublicHomePage() {
+  const [heroSearch, setHeroSearch] = useState("");
+  const [recentEntities, setRecentEntities] = useState<any[]>([]);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Fetch recently added items across API if available
+    async function loadRecent() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/cidoc/events/`);
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : data.results || [];
+          setRecentEntities(items.slice(0, 4));
+        }
+      } catch {
+        // fallback
+      }
+    }
+    loadRecent();
   }, []);
 
-  const preservationItems: PreservationItem[] = [
-    {
-      icon: Building,
-      title: 'Ancient Temples',
-      description:
-        'Sacred architecture spanning centuries of Nepali craftsmanship and spiritual heritage.',
-      gradient: 'from-blue-400 to-sky-500',
-    },
-    {
-      icon: Scroll,
-      title: 'Sacred Manuscripts',
-      description:
-        'Rare texts and documents preserving ancient knowledge and cultural wisdom.',
-      gradient: 'from-blue-500 to-cyan-500',
-    },
-    {
-      icon: Globe,
-      title: 'Living Traditions',
-      description:
-        'Festivals, rituals, and cultural practices that continue to thrive today.',
-      gradient: 'from-sky-400 to-blue-500',
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 text-blue-900 font-sans scroll-smooth overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <PublicHeader />
 
-      {/* Landing Navbar */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-white/80 backdrop-blur-xl border-b border-blue-200 shadow-sm'
-            : 'bg-white border-b border-blue-100'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-sky-600 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
-              HeritageGraph
-            </span>
-          </Link>
+      <main className="flex-1">
+        {/* Hero Section — IMDb Concept for Heritage */}
+        <section className="relative overflow-hidden border-b bg-gradient-to-b from-blue-950 via-slate-900 to-background text-white py-20 px-4 sm:px-6 lg:px-8">
+          {/* Animated Background Mesh */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-600/20 via-sky-500/10 to-transparent pointer-events-none" />
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#explore" className="text-blue-800 hover:text-blue-600 text-sm font-medium transition-colors">Explore</a>
-            <a href="#about" className="text-blue-800 hover:text-blue-600 text-sm font-medium transition-colors">About</a>
-            <a href="#contact" className="text-blue-800 hover:text-blue-600 text-sm font-medium transition-colors">Contact</a>
-          </nav>
-
-          {/* Right side */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          <div className="max-w-5xl mx-auto text-center relative z-10 space-y-8">
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={staggerContainer}
+              className="space-y-4"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
-            <AuthButtons />
-            <ThemeToggle />
-          </div>
+              <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-medium text-sky-200">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>The Open Cultural Knowledge Platform for Nepal</span>
+              </motion.div>
 
-          {/* Mobile menu */}
-          <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
+              <motion.h1 variants={fadeInUp} className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
+                Discover Nepal&apos;s Cultural Heritage Through an{" "}
+                <span className="bg-gradient-to-r from-sky-400 via-blue-300 to-indigo-300 bg-clip-text text-transparent">
+                  Interconnected Knowledge Graph
+                </span>
+              </motion.h1>
+
+              <motion.p variants={fadeInUp} className="text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+                Explore thousands of interconnected festivals, sacred places, historical personalities, rituals, and living traditions backed by verifiable sources.
+              </motion.p>
+            </motion.div>
+
+            {/* IMDb Global Search Widget */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="max-w-2xl mx-auto"
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (heroSearch.trim()) {
+                    window.location.href = `/explore?q=${encodeURIComponent(heroSearch.trim())}`;
+                  }
+                }}
+                className="relative flex items-center"
+              >
+                <Search className="absolute left-4 h-5 w-5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search Indra Jatra, Pashupatinath, King Pratap Malla, Guthi..."
+                  value={heroSearch}
+                  onChange={(e) => setHeroSearch(e.target.value)}
+                  className="pl-12 pr-28 h-14 rounded-full bg-white/10 backdrop-blur-md border-white/20 text-white placeholder:text-slate-400 focus:bg-white/20 focus:ring-2 focus:ring-sky-400 text-base shadow-2xl"
+                />
+                <Button
+                  type="submit"
+                  className="absolute right-2 h-10 px-6 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-medium shadow-md"
+                >
+                  Search
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-white/95 backdrop-blur-xl border-blue-200">
-                <nav className="mt-8 flex flex-col gap-6">
-                  <a href="#explore" className="text-lg text-blue-800 hover:text-blue-600">Explore</a>
-                  <a href="#about" className="text-lg text-blue-800 hover:text-blue-600">About</a>
-                  <a href="#contact" className="text-lg text-blue-800 hover:text-blue-600">Contact</a>
-                  <Link href="/dashboard" className="flex items-center gap-2 text-lg text-blue-800 hover:text-blue-600">
-                    <LayoutDashboard className="w-5 h-5" /> Dashboard
-                  </Link>
-                  <AuthButtons />
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
+              </form>
 
-      {/* Main Content */}
-      <main className="relative pt-16">
-        {/* Hero Section */}
-        <motion.section
-          style={{ y: heroY }}
-          className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center"
-        >
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={staggerContainer}
-            className="max-w-4xl mx-auto space-y-8"
-          >
-            <motion.div variants={fadeInUp} className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-full text-sm text-blue-700">
-                <Star className="w-4 h-4 text-blue-500" />
-                Preserving Cultural Heritage Through AI
+              {/* Quick Chips */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-slate-300">
+                <span className="text-slate-400">Popular searches:</span>
+                <Link href="/explore?q=Indra+Jatra" className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">Indra Jatra</Link>
+                <Link href="/explore?q=Pashupatinath" className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">Pashupatinath</Link>
+                <Link href="/explore?q=Machhindranath" className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">Machhindranath</Link>
+                <Link href="/explore?q=Guthi" className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors">Guthi System</Link>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Featured Heritage Highlights (IMDb Carousel / Grid Concept) */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-wider mb-1">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                Featured Records
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Featured Cultural Heritage
+              </h2>
+            </div>
+            <Link href="/explore">
+              <Button variant="ghost" className="gap-1.5 text-sm font-medium">
+                Browse All Knowledge &rarr;
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {FEATURED_HERITAGE.map((item) => (
+              <Card
+                key={item.title}
+                className="group overflow-hidden border-border/60 hover:border-primary/50 transition-all duration-300 hover:shadow-xl flex flex-col justify-between"
+              >
+                <div>
+                  {/* Hero Image/Gradient Header */}
+                  <div className={`h-36 bg-gradient-to-br ${item.imageBg} p-4 flex flex-col justify-between relative overflow-hidden`}>
+                    <div className="flex items-center justify-between z-10">
+                      <Badge className={`${item.badgeColor} border text-[11px] font-semibold backdrop-blur-md`}>
+                        {item.type}
+                      </Badge>
+                      <span className="text-xs text-white/80 font-medium flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {item.location.split(",")[0]}
+                      </span>
+                    </div>
+                    <div className="z-10">
+                      <p className="text-[11px] text-white/70 font-medium uppercase tracking-wider">{item.category}</p>
+                      <h3 className="text-lg font-bold text-white group-hover:text-sky-200 transition-colors line-clamp-1">
+                        {item.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                      {item.description}
+                    </p>
+
+                    <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40">
+                      <span className="flex items-center gap-1">
+                        <Network className="w-3.5 h-3.5 text-primary" />
+                        {item.stats.connections} Relationships
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5 text-amber-500" />
+                        {item.stats.sources} Sources
+                      </span>
+                    </div>
+                  </CardContent>
+                </div>
+
+                <div className="p-4 pt-0">
+                  <Link href={item.route} className="block w-full">
+                    <Button variant="secondary" size="sm" className="w-full gap-1.5 text-xs font-medium group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      View Full Record
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Explore by Category Surfaces */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t">
+          <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Explore by Heritage Category
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Browse structured entities curated across the CIDOC-CRM ontology architecture.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+            {CATEGORY_SURFACES.map((cat) => (
+              <Link
+                key={cat.label}
+                href={cat.type === "graph" ? "/graph" : `/explore?type=${cat.type}`}
+                className="group p-4 rounded-xl border border-border/60 hover:border-primary/40 bg-card hover:bg-accent/50 transition-all duration-300 flex flex-col items-center text-center space-y-2 shadow-sm hover:shadow-md"
+              >
+                <div className={`p-3 rounded-xl border ${cat.color} group-hover:scale-110 transition-transform`}>
+                  <cat.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                  {cat.label}
+                </h3>
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {cat.count}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Region Exploration */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-wider mb-1">
+                <MapPin className="w-4 h-4 text-emerald-500" />
+                Geographic Discovery
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Explore Cultural Heritage by Region
+              </h2>
+            </div>
+            <Link href="/explore">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                View Geographic Map &rarr;
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {REGION_SURFACES.map((reg) => (
+              <Link
+                key={reg.name}
+                href={`/explore?region=${encodeURIComponent(reg.name.split(" ")[0])}`}
+                className="group relative rounded-xl overflow-hidden border border-border/60 p-6 flex flex-col justify-end min-h-[200px] bg-slate-900 text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+              >
+                <div className={`absolute inset-0 bg-gradient-to-t ${reg.bg} opacity-90 group-hover:opacity-100 transition-opacity`} />
+                <div className="relative z-10 space-y-2">
+                  <Badge variant="outline" className="text-[10px] text-sky-300 border-sky-400/40 bg-sky-950/40">
+                    {reg.count}
+                  </Badge>
+                  <h3 className="text-lg font-bold group-hover:text-sky-200 transition-colors">
+                    {reg.name}
+                  </h3>
+                  <p className="text-xs text-slate-300 line-clamp-2">
+                    {reg.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Knowledge Graph Banner CTA */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="relative rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-8 sm:p-12 overflow-hidden shadow-2xl border border-white/10">
+            <div className="absolute right-0 top-0 w-1/2 h-full opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+            <div className="relative z-10 max-w-2xl space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 text-xs font-semibold">
+                <Network className="w-3.5 h-3.5 text-sky-400" />
+                Interactive Visualizer
               </div>
 
-              <h1 className="text-4xl md:text-6xl font-black leading-tight">
-                <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 bg-clip-text text-transparent">
-                  Preserving Our Shared Cultural Heritage
-                </span>
-                <br />
-                {/* Subtitle */}
-                <p className="mt-2 text-base md:text-lg font-medium text-slate-800">
-                  Understanding Identity, Safeguarding the Future
-                </p>
-              </h1>
-            </motion.div>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+                Uncover Hidden Relationships Across Nepal&apos;s Heritage
+              </h2>
 
-            <motion.p
-              variants={fadeInUp}
-              className="text-base md:text-lg text-blue-700 max-w-2xl mx-auto leading-relaxed"
-            >
-              Explore the history, art, and traditions that shape our shared identity —
-              digitally preserved through
-              <span className="text-transparent bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text font-semibold">
-                {' '}
-                Knowledge Graphs
-              </span>
-            </motion.p>
+              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                See how ancient rituals link to Guthi organizations, how kings commissioned specific pagoda temples, and how oral traditions span across centuries.
+              </p>
 
-            <motion.div
-              variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
-              <Link href="/dashboard/graphview">
-                <Button className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white px-8 py-3 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                  Start Exploring
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <Link href="/graph">
+                  <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2 font-semibold">
+                    <Network className="w-4 h-4" />
+                    Launch Knowledge Graph Visualizer
+                  </Button>
+                </Link>
+                <Link href="/explore">
+                  <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 gap-2">
+                    <Compass className="w-4 h-4" />
+                    Browse Knowledge Base
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Contributor Platform Callout (Separation of Concerns) */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t">
+          <div className="rounded-xl border bg-card p-8 sm:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 shadow-sm">
+            <div className="space-y-3 max-w-2xl">
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                Researcher & Curator Platform
+              </Badge>
+              <h3 className="text-2xl font-bold tracking-tight">
+                Are you a researcher or cultural practitioner?
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                HeritageGraph maintains a strict separation between public discovery and expert curation. Submit new assertions, record field surveys, upload citations, and resolve historical conflicts in our dedicated Contributor Portal.
+              </p>
+            </div>
+
+            <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <Link href="/dashboard" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Enter Contributor Portal
                 </Button>
               </Link>
-              <Link href="#about">
-                <Button
-                  variant="outline"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100/50 px-8 py-3 rounded-full text-lg font-semibold transition-all duration-300"
-                >
-                  Learn More
-                </Button>
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          {/* Scroll Indicator */}
-          <motion.div
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2 }}
-          >
-            <motion.div
-              className="w-6 h-10 border-2 border-blue-300 rounded-full flex justify-center"
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <div className="w-1 h-3 bg-blue-400 rounded-full mt-2" />
-            </motion.div>
-          </motion.div>
-        </motion.section>
-
-        {/* Explore Section */}
-        <section id="explore" className="relative py-24 px-6">
-          <div className="max-w-6xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.3 }}
-              variants={staggerContainer}
-              className="text-center mb-16"
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-4xl md:text-5xl font-bold mb-6 text-blue-900"
-              >
-                What We{' '}
-                <span className="text-transparent bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text">
-                  Preserve
-                </span>
-              </motion.h2>
-              <motion.p
-                variants={fadeInUp}
-                className="text-xl text-blue-700 max-w-3xl mx-auto"
-              >
-                From centuries-old temples to rare manuscripts, we document and digitize
-                Nepal&apos;s diverse cultural assets using cutting-edge knowledge graph
-                technology.
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="grid md:grid-cols-3 gap-8"
-            >
-              {preservationItems.map((item) => (
-                <motion.div
-                  key={item.title}
-                  variants={scaleIn}
-                  className="group relative h-full"
-                >
-                  <div className="relative p-8 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-2xl hover:bg-white transition-all duration-500 transform hover:scale-[1.02] overflow-hidden shadow-lg hover:shadow-xl h-full flex flex-col">
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
-                    />
-                    <div
-                      className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${item.gradient} mb-6 shadow-lg`}
-                    >
-                      <item.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4 text-blue-900 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-sky-500 group-hover:bg-clip-text transition-all duration-300">
-                      {item.title}
-                    </h3>
-                    <p className="text-blue-700 leading-relaxed flex-1">{item.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* About Section */}
-        <section
-          id="about"
-          className="relative py-24 px-6 bg-gradient-to-br from-blue-100 to-sky-100"
-        >
-          <div className="relative max-w-5xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.3 }}
-              variants={staggerContainer}
-              className="text-center space-y-8"
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-4xl md:text-5xl font-bold text-blue-900"
-              >
-                How You Can{' '}
-                <span className="text-transparent bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text">
-                  Contribute
-                </span>
-              </motion.h2>
-              <motion.p
-                variants={fadeInUp}
-                className="text-xl text-blue-800 max-w-4xl mx-auto leading-relaxed"
-              >
-                Whether you&apos;re a researcher, student, or local expert, your insights are
-                valuable in helping us build a richer and more reliable cultural
-                knowledge graph. We actively welcome interdisciplinary research on — or
-                built upon — the HeritageGraph platform.
-              </motion.p>
-              <motion.p variants={fadeInUp} className="text-lg text-blue-700">
-                If you&apos;re interested in collaborating, feel free to reach out to
-                CAIR-Nepal.
-              </motion.p>
-              <motion.div
-                variants={fadeInUp}
-                className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8"
-              >
-                <a href="https://github.com/CAIRNepal/heritagegraph" target="_blank" rel="noopener noreferrer">
-                  <Button className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
-                    <Github className="w-5 h-5 mr-2" />
-                    View on GitHub
-                  </Button>
-                </a>
-                <a href="mailto:info@cair-nepal.org">
-                  <Button
-                    variant="outline"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100/50 px-8 py-3 rounded-full font-semibold transition-all duration-300"
-                  >
-                    <Mail className="w-5 h-5 mr-2" />
-                    Contact Us
-                  </Button>
-                </a>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Team Section */}
-        <section className="relative py-24 px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="space-y-8"
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-3xl font-bold text-blue-800"
-              >
-                An initiative by
-              </motion.h2>
-              <motion.p variants={fadeInUp} className="text-xl text-blue-700">
-                A collective of technologists, historians, and cultural workers.
-              </motion.p>
-              <motion.div variants={scaleIn} className="inline-block">
-                <div className="relative group cursor-pointer">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-sky-500 rounded-2xl blur-lg opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                  <div className="relative bg-white/80 backdrop-blur-sm border border-blue-200 rounded-2xl p-8 hover:bg-white transition-all duration-500 shadow-lg">
-                    <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-sky-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                      <Users className="w-12 h-12 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-blue-900 mb-2">CAIR-Nepal</h3>
-                    <p className="text-blue-700 mb-4">
-                      Center for Artificial Intelligence Research
-                    </p>
-                    <a
-                      href="https://www.cair-nepal.org/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center text-blue-600 hover:text-blue-500 hover:bg-blue-100/50 px-4 py-2 rounded-md transition-all duration-300"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Visit Website
-                    </a>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section
-          id="contact"
-          className="relative py-24 px-6 bg-gradient-to-br from-blue-100 to-sky-100"
-        >
-          <div className="relative max-w-4xl mx-auto text-center">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="space-y-8"
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-4xl md:text-5xl font-bold text-blue-900"
-              >
-                Join Our{' '}
-                <span className="text-transparent bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text">
-                  Mission
-                </span>
-              </motion.h2>
-              <motion.p
-                variants={fadeInUp}
-                className="text-xl text-blue-800 max-w-2xl mx-auto"
-              >
-                Help us safeguard Nepal&apos;s intangible and tangible heritage — digitally,
-                collaboratively.
-              </motion.p>
-              <motion.div variants={fadeInUp}>
-                <a href="https://github.com/CAIRNepal/heritagegraph" target="_blank" rel="noopener noreferrer">
-                  <Button className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white px-12 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-3xl">
-                    Get Involved
-                  </Button>
-                </a>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* FAQ Section */}
-        <section className="relative py-24 px-6">
-          <div className="max-w-4xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={staggerContainer}
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-3xl md:text-4xl font-bold text-center mb-12 text-blue-900"
-              >
-                Frequently Asked{' '}
-                <span className="text-transparent bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text">
-                  Questions
-                </span>
-              </motion.h2>
-              <motion.div variants={fadeInUp}>
-                <Accordion type="single" collapsible className="space-y-4">
-                  {[
-                    {
-                      value: 'ontology',
-                      question: 'Which ontology does HeritageGraph use?',
-                      answer:
-                        'HeritageGraph is based on CIDOC-CRM, an ISO standard ontology widely used in the cultural heritage domain.',
-                    },
-                    {
-                      value: 'digital-preservation',
-                      question:
-                        'How does this help preserve cultural heritage, which is a physical task?',
-                      answer:
-                        'While preserving cultural heritage physically also remains crucial, documenting and sharing heritage digitally is also becoming increasingly important. Digital preservation ensures that information about cultural practices, artifacts, and traditions can be accessed, searched, and interacted with online, extending their reach and longevity.',
-                    },
-                    {
-                      value: 'contribution',
-                      question: 'Can I contribute to HeritageGraph?',
-                      answer:
-                        'Yes, the project is open-source and available on GitHub. Contributions from the community are welcome.',
-                    },
-                    {
-                      value: 'research-idea',
-                      question:
-                        "I have a research idea, but I'm not from an AI background. Can I still contribute?",
-                      answer:
-                        "Absolutely. HeritageGraph encourages interdisciplinary collaboration. Feel free to reach out to CAIR-Nepal — we'd be happy to explore how we can work together.",
-                    },
-                    {
-                      value: 'funding',
-                      question: 'Is this project funded by any organization?',
-                      answer: 'Not at the moment :-)',
-                    },
-                    {
-                      value: 'license',
-                      question: 'What license does HeritageGraph have?',
-                      answer:
-                        'The license for HeritageGraph has not yet been finalized, but we intend to choose one that balances community benefits with the future interests of CAIR.',
-                    },
-                  ].map((item) => (
-                    <AccordionItem
-                      key={item.value}
-                      value={item.value}
-                      className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-lg px-6 hover:bg-white transition-all duration-300 shadow-sm"
-                    >
-                      <AccordionTrigger className="text-blue-900 hover:text-blue-600 transition-colors duration-300 text-left">
-                        {item.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-blue-700 leading-relaxed">
-                        {item.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </motion.div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="relative py-12 px-6 border-t border-blue-200 bg-white/80 backdrop-blur-sm">
-        <div className="relative max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-sky-600 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-blue-900">HeritageGraph</span>
-            </div>
-            <p className="text-blue-700 text-center">
-              © {new Date().getFullYear()} HeritageGraph. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4">
-              <a href="https://github.com/CAIRNepal/heritagegraph" target="_blank" rel="noopener noreferrer">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-blue-700 hover:text-blue-600 hover:bg-blue-100/50"
-                >
-                  <Github className="w-5 h-5" />
-                </Button>
-              </a>
-              <a href="mailto:info@cair-nepal.org">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-blue-700 hover:text-blue-600 hover:bg-blue-100/50"
-                >
-                  <Mail className="w-5 h-5" />
-                </Button>
-              </a>
-              <a href="https://www.cair-nepal.org/" target="_blank" rel="noopener noreferrer">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-blue-700 hover:text-blue-600 hover:bg-blue-100/50"
-                >
-                  <ExternalLink className="w-5 h-5" />
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
