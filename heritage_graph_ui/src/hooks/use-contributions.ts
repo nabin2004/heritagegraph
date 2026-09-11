@@ -72,35 +72,43 @@ export function useReactions() {
       entityId?: string,
       commentId?: string
     ) => {
-      const res = await fetch(
-        `${API_BASE_URL}/data/api/reactions/toggle/`,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            reaction_type: reactionType,
-            ...(entityId ? { entity_id: entityId } : {}),
-            ...(commentId ? { comment_id: commentId } : {}),
-          }),
-        }
-      );
-      if (!res.ok) throw new Error("Failed to toggle reaction");
-      return res.json();
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/data/api/reactions/toggle/`,
+          {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify({
+              reaction_type: reactionType,
+              ...(entityId ? { entity_id: entityId } : {}),
+              ...(commentId ? { comment_id: commentId } : {}),
+            }),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to toggle reaction");
+        return res.json();
+      } catch (e) {
+        return null;
+      }
     },
     [getHeaders]
   );
 
   const getSummary = useCallback(
     async (entityId?: string, commentId?: string): Promise<ReactionSummary> => {
-      const params = entityId
-        ? `entity_id=${entityId}`
-        : `comment_id=${commentId}`;
-      const res = await fetch(
-        `${API_BASE_URL}/data/api/reactions/summary/?${params}`,
-        { headers: getHeaders() }
-      );
-      if (!res.ok) throw new Error("Failed to get reaction summary");
-      return res.json();
+      try {
+        const params = entityId
+          ? `entity_id=${entityId}`
+          : `comment_id=${commentId}`;
+        const res = await fetch(
+          `${API_BASE_URL}/data/api/reactions/summary/?${params}`,
+          { headers: getHeaders() }
+        );
+        if (!res.ok) throw new Error("Failed to get reaction summary");
+        return res.json();
+      } catch {
+        return { upvotes: 0, downvotes: 0, user_reaction: null };
+      }
     },
     [getHeaders]
   );
@@ -134,6 +142,8 @@ export function useComments(entityId: string) {
         const data = await res.json();
         setComments(data.results || data);
       }
+    } catch {
+      // Catch network error gracefully when API is offline
     } finally {
       setLoading(false);
     }
@@ -203,12 +213,16 @@ export function useForks() {
 
   const listForks = useCallback(
     async (entityId: string): Promise<ForkInfo[]> => {
-      const res = await fetch(
-        `${API_BASE_URL}/data/api/forks/?entity_id=${entityId}`,
-        { headers: getHeaders() }
-      );
-      if (!res.ok) throw new Error("Failed to list forks");
-      return res.json();
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/data/api/forks/?entity_id=${entityId}`,
+          { headers: getHeaders() }
+        );
+        if (!res.ok) throw new Error("Failed to list forks");
+        return res.json();
+      } catch {
+        return [];
+      }
     },
     [getHeaders]
   );
@@ -273,7 +287,7 @@ export function useSharing() {
   );
 
   const shareToTwitter = (entityName: string, entityId: string) => {
-    const url = `${window.location.origin}/dashboard/knowledge/entity/${entityId}`;
+    const url = `${window.location.origin}/festival/${entityId}`;
     const text = `Check out "${entityName}" on HeritageGraph`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
@@ -283,7 +297,7 @@ export function useSharing() {
   };
 
   const shareToFacebook = (entityId: string) => {
-    const url = `${window.location.origin}/dashboard/knowledge/entity/${entityId}`;
+    const url = `${window.location.origin}/festival/${entityId}`;
     window.open(
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
       "_blank"
@@ -292,7 +306,7 @@ export function useSharing() {
   };
 
   const shareToLinkedIn = (entityId: string) => {
-    const url = `${window.location.origin}/dashboard/knowledge/entity/${entityId}`;
+    const url = `${window.location.origin}/festival/${entityId}`;
     window.open(
       `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
       "_blank"
@@ -301,7 +315,7 @@ export function useSharing() {
   };
 
   const shareViaEmail = (entityName: string, entityId: string) => {
-    const url = `${window.location.origin}/dashboard/knowledge/entity/${entityId}`;
+    const url = `${window.location.origin}/festival/${entityId}`;
     const subject = `HeritageGraph: ${entityName}`;
     const body = `Check out "${entityName}" on HeritageGraph:\n${url}`;
     window.open(
@@ -311,7 +325,7 @@ export function useSharing() {
   };
 
   const copyLink = async (entityId: string) => {
-    const url = `${window.location.origin}/dashboard/knowledge/entity/${entityId}`;
+    const url = `${window.location.origin}/festival/${entityId}`;
     await navigator.clipboard.writeText(url);
     trackShare(entityId, "copy_link");
   };
